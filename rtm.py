@@ -124,7 +124,7 @@ def gui():
     if imgui.begin("##FullscreenWindow", None, imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_decoration | imgui.WindowFlags_.no_background | imgui.WindowFlags_.no_focus_on_appearing):
         if imgui.begin_table("Table", 2, imgui.TableFlags_.resizable | imgui.TableFlags_.sizing_stretch_prop, (-1, -1)):
             imgui.table_setup_column("Rendering", imgui.TableColumnFlags_.width_stretch)
-            imgui.table_setup_column("Settings", imgui.TableColumnFlags_.width_fixed, 450)
+            imgui.table_setup_column("Settings", imgui.TableColumnFlags_.width_fixed, 400)
             imgui.table_next_row()
             imgui.table_set_column_index(0)
             show_image(*state.camera.resolution)
@@ -136,7 +136,7 @@ def gui():
                         resolutionChanged, state.camera.resolution[0] = imgui.slider_int("Resolution", state.camera.resolution[0], 64, 2048)
                         if resolutionChanged:
                             state.camera.resolution[1] = state.camera.resolution[0]
-                            state.camera.update()
+                            state.camera.update(state.camera.q)
                     imgui.end_tab_item()
                 if imgui.begin_tab_item("Other")[0]:
                     imgui.text("More settings can be added here.")
