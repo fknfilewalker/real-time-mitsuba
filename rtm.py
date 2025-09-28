@@ -44,8 +44,8 @@ class Camera:
         self.update()
 
     def map_to_sphere(self, px, py):
-        x = (1.0 - (px / (self.resolution[0] * self.scale)) * 2.0)
-        y = -(1.0 - (py / (self.resolution[1] * self.scale)) * 2.0)
+        x = -(1.0 - (px / (self.resolution[0] * self.scale)) * 2.0)
+        y = (1.0 - (py / (self.resolution[1] * self.scale)) * 2.0)
         length2 = x*x + y*y
         if length2 > 1.0:
             return dr.scalar.Array3f(x, y, 0.0) / dr.sqrt(length2)
@@ -55,7 +55,7 @@ class Camera:
     def rotate(self, a, b):
         a = self.map_to_sphere(*a)
         b = self.map_to_sphere(*b)
-        perp = dr.cross(a, b)
+        perp = dr.cross(b, a)
         if dr.norm(perp) > 1e-5:
             q = dr.scalar.Quaternion4f(perp.x, perp.y, perp.z, dr.dot(a, b))
         else:
@@ -95,7 +95,7 @@ class State:
                 self.camera.d -= io.mouse_wheel * 0.3
                 self.camera.update(self.camera.q)
 
-state = State("scenes/simple.xml")
+state = State("scenes/cbox.xml")
 
 @dr.freeze
 def render(scene, texture, camera, seed=0, sensor=0):
