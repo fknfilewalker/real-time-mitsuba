@@ -69,13 +69,15 @@ class Camera:
                 up=dr.quat_apply(q, dr.scalar.Array3f(0, 1, 0))
             )
         self.params['to_world'] = self.to_world
-        self.params['film.size'] = self.resolution 
+        self.params['film.size'] = self.resolution
+        self.film = dr.zeros(TensorXf, shape=(self.resolution[1], self.resolution[0], 4))
         self.params.update()
         
 class State:
     def __init__(self, scene_file):
         self.scene = mi.load_file(scene_file)
         self.frame = 0
+        self.accumulate = True
         self.texture: Texture | None = None
         self.camera = Camera()
 
@@ -109,8 +111,9 @@ def show_image(width, height):
         # Add alpha channel if not present
         alpha = dr.ones(TensorXf, shape=(img.shape[0], img.shape[1], 1))
         img = dr.concat((TensorXf(img), alpha), axis=2)
-    img = dr.linear_to_srgb(img)
-    state.texture.interop.map().upload(img).unmap()
+    state.camera.film = state.camera.film + img if state.accumulate else img
+    # use alpha channel to store the sample count
+    state.texture.interop.map().upload(dr.linear_to_srgb(state.camera.film / state.camera.film[0][0][3]) ).unmap()
     state.frame += 1
     w, h = width * state.camera.scale, height * state.camera.scale
     imgui.set_cursor_pos_x(imgui.get_column_width()//2 - w//2)
@@ -137,6 +140,7 @@ def gui():
                         if resolutionChanged:
                             state.camera.resolution[1] = state.camera.resolution[0]
                             state.camera.update(state.camera.q)
+                    state.accumulate = imgui.checkbox("Accumulate", state.accumulate)[1]
                     imgui.end_tab_item()
                 if imgui.begin_tab_item("Other")[0]:
                     imgui.text("More settings can be added here.")
