@@ -38,6 +38,7 @@ class Camera:
         self.q, self.c, self.d = dr.scalar.Quaternion4f(0, 0, 0, 1), dr.scalar.Array3f(0, 0, 0), 14.0
         self.resolution, self.scale = dr.scalar.Array2u(256), 1.0
         self.gl_texture: GlTexture | None = None
+        self.start_pos = None
         self.sensor = mi.load_dict({
             'type': 'perspective',
             'fov': 39.3077,
@@ -120,7 +121,6 @@ class State:
         self.frame = 0
         self.accumulate = True
         self.camera = Camera()
-        self.start_pos = None
 
     def process_inputs(self, min, max):
         if imgui.table_get_hovered_column() == 0:
