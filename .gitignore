@@ -1,2 +1,5 @@
 scenes
+__pycache__
 *.pyc
+*.DS_Store
+*.ini
