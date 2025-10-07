@@ -20,7 +20,7 @@ class Texture:
 
 class Camera:
     def __init__(self):
-        self.q, self.d = dr.scalar.Quaternion4f(0, 0, 0, 1), 14.0
+        self.q, self.c, self.d = dr.scalar.Quaternion4f(0, 0, 0, 1), dr.scalar.Array3f(0, 0, 0), 14.0
         self.resolution, self.scale = dr.scalar.Array2u(256), 1.0
         self.sensor = mi.load_dict({
             'type': 'perspective',
@@ -64,8 +64,8 @@ class Camera:
 
     def update(self, q=dr.scalar.Quaternion4f(0, 0, 0, 1)):
         self.to_world = mi.ScalarTransform4f().look_at(
-                origin=dr.quat_apply(q, dr.scalar.Array3f(0, 0, self.d)),
-                target=[0, 0, 0],
+                origin=dr.quat_apply(q, dr.scalar.Array3f(0, 0, self.d)) + self.c,
+                target=self.c,
                 up=dr.quat_apply(q, dr.scalar.Array3f(0, 1, 0))
             )
         self.params['to_world'] = self.to_world
@@ -80,24 +80,30 @@ class State:
         self.accumulate = True
         self.texture: Texture | None = None
         self.camera = Camera()
+        self.start_pos = None
 
     def process_inputs(self, min, max):
-        if imgui.table_get_hovered_column() == 0 and imgui.is_item_hovered():
+        if imgui.table_get_hovered_column() == 0:
             io = imgui.get_io()
             if imgui.is_mouse_clicked(0):
                 self.start_pos = io.mouse_pos - min
-            if imgui.is_mouse_released(0):
+            if imgui.is_mouse_released(0) and self.start_pos:
                 q = self.camera.rotate(self.start_pos, io.mouse_pos - min)
                 self.start_pos = None
-                self.camera.update(q)
                 self.camera.q = q
-            if imgui.is_mouse_dragging(0):
+                self.camera.update(q)
+            if imgui.is_mouse_dragging(0) and self.start_pos:
                 self.camera.update(self.camera.rotate(self.start_pos, io.mouse_pos - min))
+            elif imgui.is_mouse_dragging(1):
+                self.camera.c += dr.quat_apply(self.camera.q, dr.scalar.Array3f(-io.mouse_delta.x, io.mouse_delta.y, 0.0)) * (self.camera.d * 0.002)
+                self.camera.update(self.camera.q)
             if io.mouse_wheel != 0:
-                self.camera.d -= io.mouse_wheel * 0.3
+                self.camera.d = self.camera.d - io.mouse_wheel * 0.3
+                if self.camera.d < 0.1:
+                    self.camera.d = 0.1
                 self.camera.update(self.camera.q)
 
-state = State("scenes/cbox.xml")
+state = State("scenes/simple.xml")
 
 @dr.freeze
 def render(scene, texture, camera, seed=0, sensor=0):
