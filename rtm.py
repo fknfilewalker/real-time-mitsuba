@@ -126,8 +126,6 @@ class State:
         if imgui.table_get_hovered_column() == 0:
             self.camera.process_imgui_inputs(min, max)
 
-state = State("scenes/simple.xml")
-
 @dr.freeze
 def render(scene, texture, camera, seed=0, sensor=0):
     return mi.render(scene, spp=1, seed=seed, sensor=sensor)
@@ -180,4 +178,6 @@ def gui():
             imgui.end_table()
         imgui.end()
 
-immapp.run(gui_function=gui, window_size=(800, 400), window_title="Renderer", fps_idle=0)
+if __name__ == "__main__":
+    state = State("scenes/simple.xml")
+    immapp.run(gui_function=gui, window_size=(800, 400), window_title="Renderer", fps_idle=0)
