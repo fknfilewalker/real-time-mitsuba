@@ -8,14 +8,12 @@ mi.set_variant('cuda_ad_rgb' if dr.has_backend(dr.JitBackend.CUDA) else 'llvm_ad
 class GlTexture:
     def __init__(self, width, height):
         import OpenGL.GL as gl
-        self.width, self.height, self.id = width, height, gl.glGenTextures(1)
-        gl.glBindTexture(gl.GL_TEXTURE_2D, self.id)
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-        gl.glTexImage2D(
-            gl.GL_TEXTURE_2D, 0, gl.GL_RGBA32F, width, height, 0,
-            gl.GL_RGBA, gl.GL_FLOAT, None
-        )
+        self.width, self.height, self.id = width, height, gl.GLuint()
+        gl.glCreateTextures(gl.GL_TEXTURE_2D, 1, self.id)
+        self.id = self.id.value
+        gl.glTextureParameteri(self.id, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+        gl.glTextureParameteri(self.id, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+        gl.glTextureStorage2D(self.id, 1, gl.GL_RGBA32F, width, height)
         try:
             self.interop = dr.cuda.GLInterop.from_texture(self.id)
         except Exception as e:
@@ -27,9 +25,7 @@ class GlTexture:
             self.interop.map().upload(img).unmap()
         elif dr.backend_v(img) == dr.JitBackend.LLVM:
             import OpenGL.GL as gl
-            gl.glBindTexture(gl.GL_TEXTURE_2D, self.id)
-            gl.glTexSubImage2D(
-                gl.GL_TEXTURE_2D, 0, 0, 0, self.width, self.height,
+            gl.glTextureSubImage2D(self.id, 0, 0, 0, self.width, self.height,
                 gl.GL_RGBA, gl.GL_FLOAT, img.to_numpy()
             )
 
