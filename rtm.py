@@ -118,7 +118,7 @@ class Camera:
 class State:
     def __init__(self, scene_file):
         self.scene = mi.load_file(scene_file)
-        self.frame = mi.UInt(0)
+        self.frame = dr.opaque(dr.auto.UInt, 0)
         self.accumulate = True
         self.camera = Camera()
 
