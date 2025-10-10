@@ -1,5 +1,5 @@
 import drjit as dr
-from drjit.auto.ad import TensorXf
+from drjit.auto import TensorXf, Quaternion4f, Array3f, Float
 import mitsuba as mi
 from imgui_bundle import imgui, immapp
 # dr.set_flag(dr.JitFlag.Debug, True)
@@ -35,7 +35,7 @@ class GlTexture:
 
 class Camera:
     def __init__(self):
-        self.q, self.c, self.d = dr.scalar.Quaternion4f(0, 0, 0, 1), dr.scalar.Array3f(0, 0, 0), 14.0
+        self.q, self.c, self.d = Quaternion4f(0, 0, 0, 1), Array3f(0, 0, 0), Float(14.0)
         self.resolution, self.scale = dr.scalar.Array2u(256), 1.0
         self.gl_texture: GlTexture | None = None
         self.start_pos = None
@@ -65,25 +65,25 @@ class Camera:
         y = (1.0 - (py / (self.resolution[1] * self.scale)) * 2.0)
         length2 = x*x + y*y
         if length2 > 1.0:
-            return dr.scalar.Array3f(x, y, 0.0) / dr.sqrt(length2)
+            return Array3f(x, y, 0.0) / dr.sqrt(length2)
         else:
-            return dr.scalar.Array3f(x, y, dr.sqrt(max(0.0, 1.0 - length2)))
+            return Array3f(x, y, dr.sqrt(max(0.0, 1.0 - length2)))
 
     def rotate(self, a, b):
         a = self.map_to_sphere(*a)
         b = self.map_to_sphere(*b)
         perp = dr.cross(b, a)
         if dr.norm(perp) > 1e-5:
-            q = dr.scalar.Quaternion4f(perp.x, perp.y, perp.z, dr.dot(a, b))
+            q = Quaternion4f(perp.x, perp.y, perp.z, dr.dot(a, b))
         else:
-            q = dr.scalar.Quaternion4f(0, 0, 0, 1)
+            q = Quaternion4f(0, 0, 0, 1)
         return dr.normalize(self.q * q)
 
-    def update(self, q=dr.scalar.Quaternion4f(0, 0, 0, 1)):
-        self.to_world = mi.ScalarTransform4f().look_at(
-                origin=dr.quat_apply(q, dr.scalar.Array3f(0, 0, self.d)) + self.c,
+    def update(self, q=Quaternion4f(0, 0, 0, 1)):
+        self.to_world = mi.Transform4f().look_at(
+                origin=dr.quat_apply(q, Array3f(0, 0, self.d)) + self.c,
                 target=self.c,
-                up=dr.quat_apply(q, dr.scalar.Array3f(0, 1, 0))
+                up=dr.quat_apply(q, Array3f(0, 1, 0))
             )
         self.params['to_world'] = self.to_world
         self.params['film.size'] = self.resolution
@@ -107,7 +107,7 @@ class Camera:
         if imgui.is_mouse_dragging(0) and self.start_pos:
             self.update(self.rotate(self.start_pos, io.mouse_pos - min))
         elif imgui.is_mouse_dragging(1):
-            self.c += dr.quat_apply(self.q, dr.scalar.Array3f(-io.mouse_delta.x, io.mouse_delta.y, 0.0)) * (self.d * 0.002)
+            self.c += dr.quat_apply(self.q, Array3f(-io.mouse_delta.x, io.mouse_delta.y, 0.0)) * (self.d * 0.002)
             self.update(self.q)
         if io.mouse_wheel != 0:
             self.d = self.d - io.mouse_wheel * 0.3
@@ -118,7 +118,7 @@ class Camera:
 class State:
     def __init__(self, scene_file):
         self.scene = mi.load_file(scene_file)
-        self.frame = 0
+        self.frame = mi.UInt(0)
         self.accumulate = True
         self.camera = Camera()
 
@@ -126,13 +126,13 @@ class State:
         if imgui.table_get_hovered_column() == 0:
             self.camera.process_imgui_inputs(min, max)
 
-@dr.freeze
-def render(scene, texture, camera, seed=0, sensor=0):
+@dr.freeze(warn_after=1)
+def render(scene, texture, seed=0, sensor=0):
     return mi.render(scene, spp=1, seed=seed, sensor=sensor)
 
 def show_image(width, height):
     state.camera.handle_gl_texture()
-    img = render(state.scene, state.camera.gl_texture, state.camera, seed=mi.UInt(state.frame), sensor=state.camera.sensor)
+    img = render(state.scene, state.camera.gl_texture, seed=state.frame, sensor=state.camera.sensor)
     if img.shape[2] == 3:
         # Add alpha channel if not present
         alpha = dr.ones(TensorXf, shape=(img.shape[0], img.shape[1], 1))
